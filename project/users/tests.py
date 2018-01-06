@@ -10,10 +10,10 @@ def create_superuser():
     Creates and retuns a superuser - instance of settings.MONGOENGINE_USER_DOCUMENT
     """
     new_admin = User(
-        id=1,
-        username="admin@example.com",
+        username="admin",
         email="admin@example.com",
-        name="admin",
+        first_name="admin",
+        last_name="nimda",
         is_active=True,
         is_staff=True
     )
@@ -27,10 +27,11 @@ def create_user():
     Creates and returns a regular user - object of settings.MONGOENGINE_USER_DOCUMENT
     """
     new_user = User(
-        id=10,
-        username="user@example.com",
-        email="user@example.com",
-        name="user",
+        username="testuser",
+        email="testuser@test.com",
+        first_name="test",
+        last_name="user",
+        bio="A funny guy!",
         is_active=True,
         is_staff=False
     )
@@ -49,7 +50,7 @@ class ObtainAuthTokenTestCase(APITestCase):
 
     def test_post_correct_credentials(self):
         c = APIClient()
-
+        print (self.url)
         response = c.post(self.url, {"username": "user@example.com", "password": "foobar"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -89,3 +90,84 @@ class UserViewSetTestCase(APITestCase):
 
         response = c.get(self.url, HTTP_AUTHORIZATION=self.auth_header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+class UserUpdateViewTest(APITestCase):
+    def setUp(self):
+        self.new_user = create_user()
+        self.superuser = create_superuser()
+        self.url = reverse("api:updateuser")
+        
+        self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
+        self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
+    
+    def doCleanups(self):
+        #self.new_user.delete()
+        #token.delete()
+        
+        User.drop_collection()
+        Token.drop_collection()
+        
+    def test_get_unauthorized(self):
+        c = APIClient()
+        
+        response = c.post(self.url)
+        print (response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_existing_username(self):
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=self.auth_header)
+        fresh_updates = {"username":"admin","first_name":"fresh_firstname","last_name":"mimi"\
+                            ,"bio":"fresh bio my friend", "email":"fresh_email@gmail.com"}
+        response = c.put(self.url, fresh_updates)
+        print (response.content, response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_existing_email(self):
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=self.auth_header)
+        fresh_updates = {"username":"freshuser","first_name":"fresh_firstname","last_name":"mimi"\
+                            ,"bio":"fresh bio my friend", "email":"admin@example.com"}
+        response = c.put(self.url, fresh_updates)
+        print (response.content, response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+class PasswordChaneViewTest(APITestCase):
+    def setUp(self):
+        self.new_user = create_user()
+        self.url = reverse("api:pwd_change")
+        
+        self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
+        self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
+    
+    def doCleanups(self):
+        #self.new_user.delete()
+        #token.delete()
+        
+        User.drop_collection()
+        Token.drop_collection()
+        
+    def test_get_unauthorized(self):
+        c = APIClient()
+        
+        response = c.post(self.url)
+        print (response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_old_password(self):
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=self.auth_header)
+        data = {"old_password":"", "new_password1":"", "new_password2":""}
+        response = c.post(self.url, data)
+        print (response.content, response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    
+def execute_test() :
+    
+    new_test = PasswordChaneViewTest()
+    new_test.doCleanups()
+    new_test.setUp()
+    print ("first test: old password")
+    new_test.test_old_password()
+    

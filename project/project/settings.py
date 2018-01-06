@@ -40,9 +40,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
     'rest_framework',
     'rest_framework_mongoengine',
-    'mongoengine.django.mongo_auth',
+    
+    'django_mongoengine',
+    'django_mongoengine.mongo_auth',
+    'django_mongoengine.mongo_admin',
+    
     'app',
     'users'
 ]
@@ -97,20 +102,13 @@ DATABASES = {
 MONGODB_DATABASES = {
     "default": {
         "name": "project",
-        "host": "localhost",
+        "host": "mongodb://admin:azerty@cluster0-shard-00-00-uaelv.mongodb.net:27017,cluster0-shard-00-01-uaelv.mongodb.net:27017,cluster0-shard-00-02-uaelv.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin",
         "port": 27017,
         "tz_aware": True,  # if you use timezones in django (USE_TZ = True)
     },
-
-    "test": {
-        "name": "test_project",
-        "host": "localhost",
-        "port": 27017,
-        "tz_aware": True,  # if you use timezones in django (USE_TZ = True)
-    }
 }
 
-
+'''
 def is_test():
     """
     Checks, if we're running the server for real or in unit-test.
@@ -137,7 +135,7 @@ mongoengine.connect(
     host=MONGODB_DATABASES[db]['host']
 )
 
-
+'''
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
 
@@ -160,11 +158,15 @@ AUTH_PASSWORD_VALIDATORS = [
 # while all the real functionality is associated with MONGOENGINE_USER_DOCUMENT
 AUTH_USER_MODEL = 'mongo_auth.MongoUser'
 
+# newline
+SESSION_ENGINE = 'django_mongoengine.sessions'
+
 MONGOENGINE_USER_DOCUMENT = 'users.models.User'
 
 # Don't confuse Django's AUTHENTICATION_BACKENDS with DRF's AUTHENTICATION_CLASSES!
 AUTHENTICATION_BACKENDS = (
-    'mongoengine.django.auth.MongoEngineBackend',
+    'django_mongoengine.mongo_auth.backends.MongoEngineBackend',
+    #'mongoengine.django.auth.MongoEngineBackend',
     #'django.contrib.auth.backends.ModelBackend'
 )
 
@@ -200,3 +202,7 @@ STATICFILES_DIRS = (
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+ADMIN_EMAIL = 'admin@mail.com'
+
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = os.path.join(BASE_DIR,'tmp/emails') # change this to a proper location
