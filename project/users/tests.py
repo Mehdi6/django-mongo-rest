@@ -217,7 +217,7 @@ class SignUpTest(APITestCase):
         response = c.post(self.url, my_user_data)
         print ("test_signup_username_constraints", response.content)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-    
+
 def execute_test() :
     
     new_test = UserViewTest()

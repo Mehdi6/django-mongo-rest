@@ -3,6 +3,8 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
 from django.views.decorators.debug import sensitive_post_parameters
 from django.utils.decorators import method_decorator
+from django.utils import timezone
+from rest_framework.reverse import reverse
 
 from rest_framework import views, mixins, permissions, exceptions, status
 from rest_framework.response import Response
@@ -55,6 +57,7 @@ class UserView(RetrieveUpdateAPIView):
         return self.partial_update(request, *args, **kwargs)
 
 class LoginView(GenericAPIView):
+    
     pass
     
 class PasswordChangeView(GenericAPIView):
@@ -109,7 +112,7 @@ class SignUpView(GenericAPIView):
                 validate your email address by clicking on the link bellow.
                 Thank you!"""
         url= self.request.get_host()
-        msg +="\n\n" + url +"/validateemail/?token="+ token
+        msg +="\n\n" + url +reverse("api:verify_email")+"?token="+ token
         
         n = send_mail(
             'Validation Email to Signup',
@@ -129,7 +132,7 @@ class SignUpView(GenericAPIView):
         token = binascii.hexlify(os.urandom(32)).decode()
         validToken = EmailValidationToken(token=token, user=user)
         return (token, validToken)
-        
+
 class ValidateEmailView(GenericAPIView):
     # This view validate the user email
     # It takes as input a token, then it verify if it 
@@ -151,27 +154,28 @@ class ValidateEmailView(GenericAPIView):
         #TODO import django.timezone ... timezone.now
         
         tmz = pytz.timezone(settings.TIME_ZONE)
-        expiration = (tmz.localize(datetime.datetime.now()) - valid.created_at)
+        #expiration = (tmz.localize(datetime.datetime.now()) - valid.created_at)
+        expiration = timezone.now() - valid.created_at
+        
         # If the validation email was sent above 15 mins ago, then it expired
         if expiration.total_seconds()/60 > 15:
             valid.delete()
             msg = {"detail": _("Expired validation email! Go signup again.")} 
-            return Response(msg, 
-                                    status=status.HTTP_200_OK)
+            return Response(msg, status=status.HTTP_200_OK)
         
-        # remove the token and validate user account is_active=true
+        # remove the token and validate user account email_is_valid=true
         user = valid.user
         valid.delete()
-        user.is_active= True
+        user.email_is_valid=True
         user.save()
         msg = {"detail": _("Your Email is now validated.")}
         return Response(msg, status=status.HTTP_200_OK)
     
 # TODO :
 """
-    -Sign Up with email comfirmation
+    DONE-Sign Up with email comfirmation
     -Login
-    -Update user information:
+    DONE-Update user information:
     -Update email
 """
 
