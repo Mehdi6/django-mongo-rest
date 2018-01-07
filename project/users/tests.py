@@ -218,6 +218,59 @@ class SignUpTest(APITestCase):
         print ("test_signup_username_constraints", response.content)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+        
+class LoginViewTest(APITestCase):
+    def setUp(self):
+        self.new_user = create_user()
+        #self.superuser = create_superuser()
+        self.url = reverse("api:login")
+        
+        self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
+        self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
+    
+    def doCleanups(self):
+        #self.new_user.delete()
+        #token.delete()
+        
+        User.drop_collection()
+        Token.drop_collection()
+        EmailValidationToken.drop_collection()
+    
+    def test_username_not_valid(self):
+        c = APIClient()
+        
+        credentials = {"username":"resutset", "password":"foobar"}
+        response = c.post(self.url, credentials)
+        print ("test_username_not_valid", response.content)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_email_is_valid(self):
+        c = APIClient()
+        
+        credentials = {"username":"testuser", "password":"foobar"}
+        response = c.post(self.url, credentials)
+        print ("test_email_is_valid", response.content)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_password_no_match(self):
+        c = APIClient()
+        
+        credentials = {"username":"testuser", "password":"foo"}
+        response = c.post(self.url, credentials)
+        print ("test_password_no_match", response.content)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_login(self):
+        c = APIClient()
+        self.new_user.email_is_valid = True
+        self.new_user.save()
+        credentials = {"username":"testuser", "password":"foobar"}
+        response = c.post(self.url, credentials)
+        print ("test_login", response.content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Same token
+        self.assertEqual(response.content.decode('UTF-8'), r'{"token":"2c7e9e9465e917dcd34e620193ed2a7447140e5b"}')
+    
 def execute_test() :
     
     new_test = UserViewTest()

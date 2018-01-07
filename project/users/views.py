@@ -55,10 +55,6 @@ class UserView(RetrieveUpdateAPIView):
     
     def put(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
-
-class LoginView(GenericAPIView):
-    
-    pass
     
 class PasswordChangeView(GenericAPIView):
     """
@@ -153,7 +149,7 @@ class ValidateEmailView(GenericAPIView):
             
         #TODO import django.timezone ... timezone.now
         
-        tmz = pytz.timezone(settings.TIME_ZONE)
+        #tmz = pytz.timezone(settings.TIME_ZONE)
         #expiration = (tmz.localize(datetime.datetime.now()) - valid.created_at)
         expiration = timezone.now() - valid.created_at
         
@@ -179,7 +175,7 @@ class ValidateEmailView(GenericAPIView):
     -Update email
 """
 
-class ObtainAuthToken(views.APIView):
+class LoginView(views.APIView):
     throttle_classes = ()
     permission_classes = ()
     authentication_classes = (TokenAuthentication, )
@@ -201,4 +197,4 @@ class ObtainAuthToken(views.APIView):
         return Response({'token': token.key})
 
 
-obtain_auth_token = ObtainAuthToken.as_view()
+#obtain_auth_token = ObtainAuthToken.as_view()
