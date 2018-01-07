@@ -91,11 +91,11 @@ class UserViewSetTestCase(APITestCase):
         response = c.get(self.url, HTTP_AUTHORIZATION=self.auth_header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-class UserUpdateViewTest(APITestCase):
+class UserViewTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
         self.superuser = create_superuser()
-        self.url = reverse("api:updateuser")
+        self.url = reverse("api:user_profile")
         
         self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
         self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
@@ -113,7 +113,14 @@ class UserUpdateViewTest(APITestCase):
         response = c.post(self.url)
         print (response.status_code)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
+        
+    def test_read_user_info(self):
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION = self.auth_header)
+        response = c.get(self.url)
+        print (response.content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
     def test_existing_username(self):
         c = APIClient()
         c.credentials(HTTP_AUTHORIZATION=self.auth_header)
@@ -131,6 +138,7 @@ class UserUpdateViewTest(APITestCase):
         response = c.put(self.url, fresh_updates)
         print (response.content, response.status_code)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        #TODO: add unique emails to the DB
     
 class PasswordChaneViewTest(APITestCase):
     def setUp(self):
@@ -187,15 +195,14 @@ class PasswordChaneViewTest(APITestCase):
     
 def execute_test() :
     
-    new_test = PasswordChaneViewTest()
+    new_test = UserViewTest()
     new_test.doCleanups()
     new_test.setUp()
-    #print ("first test: old password")
-    #new_test.test_old_password()
-    #print ("second test: new password no match")
-    #new_test.test_new_password_no_match()
-    #print ("third test: new password constraints")
-    #new_test.test_new_password_constraints()
-    print ("Fourth test: everything is ok")
-    new_test.test_everything_is_ok()
+    #print ("first test: existing username")
+    #new_test.test_existing_username()
+    #print ("second test: existing email")
+    #new_test.test_existing_email()
+    print ("third test: retrieve user info")
+    new_test.test_read_user_info()
+    
     

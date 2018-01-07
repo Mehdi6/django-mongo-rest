@@ -41,7 +41,18 @@ class UserViewSet(mixins.RetrieveModelMixin,
         return self.partial_update(request, *args, **kwargs)
         
 class UserView(RetrieveUpdateAPIView):
-    pass
+    permission_classes = (permissions.IsAuthenticated, )  # IsAdminUser?
+    authentication_classes = (TokenAuthentication, )
+    serializer_class = UserSerializer
+    
+    def get_object(self):
+        return self.request.user
+        
+    def get_queryset(self):
+        return User.objects.none()
+    
+    def put(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
 
 class LoginView(GenericAPIView):
     pass
