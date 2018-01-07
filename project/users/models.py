@@ -28,6 +28,8 @@ class User(AbstractUser):
     """
     
     bio = fields.StringField(max_length=1000)
+    # For email validation
+    email_is_valid = fields.BooleanField(default=False)
 
 @python_2_unicode_compatible
 class EmailValidationToken(Document):

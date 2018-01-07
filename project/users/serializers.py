@@ -46,22 +46,66 @@ class UserSerializer(DocumentSerializer):
         read_only_fields = ('email', )
     
 
-class SignUpSerializer(DocumentSerializer):
-    #id = serializers.IntegerField(read_only=False)
-    user_id = ObjectIdField(source='id')
+class SignUpSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        max_length=120,
+        min_length=5)
+        
+    email = serializers.EmailField()
+    password1 = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
     
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'password']#, 'first_name', 'last_name']
+    def validate_username(self, username):
+        #TODO better username validation
+        regexp = "/^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$/"
+        #validate with regexp
+        #check if username exists
+        usr = User.objects.filter(username=username)
+        if usr:
+            raise serializers.ValidationError(
+                _("A user is already registered with this username."))
+        return username
 
+    def validate_email(self, email):
+        # Check if a already uses this email
+        usr = User.objects.filter(email=email)
+        if usr:
+            raise serializers.ValidationError(
+                _("A user is already registered with this e-mail address."))
+        return email
+
+    def validate_password1(self, password):
+        #TODO better password constraints (length, uppercase, lowercase, special characters, etc)
+        min_length = 8#app_settings.PASSWORD_MIN_LENGTH
+        if len(password) < min_length:
+            raise serializers.ValidationError(_("Password must be a minimum of {0} "
+                                          "characters.").format(min_length))
+        return password
+
+    def validate(self, data):
+        if data['password1'] != data['password2']:
+            raise serializers.ValidationError(_("The two password fields didn't match."))
+        return data
+
+    def get_cleaned_data(self):
+        return {
+            'username': self.validated_data.get('username', ''),
+            'password1': self.validated_data.get('password1', ''),
+            'email': self.validated_data.get('email', '')
+        }
+
+    def save(self, request):
+        self.cleaned_data = self.get_cleaned_data()
+        new_user = User(username=self.cleaned_data['username'], email=self.cleaned_data['email'])
+        new_user.set_password(self.cleaned_data['password1'])
+        new_user.save()
+        return new_user
+
+    
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(max_length=128)
     new_password1 = serializers.CharField(max_length=128)
     new_password2 = serializers.CharField(max_length=128)
-
-    
-    
-    #set_password_form_class = SetPasswordForm
 
     def __init__(self, *args, **kwargs):
         super(PasswordChangeSerializer, self).__init__(*args, **kwargs)

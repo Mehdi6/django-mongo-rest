@@ -1,6 +1,7 @@
 from rest_framework.test import APIClient, APITestCase
-from rest_framework import status
+from rest_framework import status, exceptions
 from rest_framework.reverse import reverse
+from mongoengine.errors import DoesNotExist
 
 from users.models import *
 
@@ -66,31 +67,6 @@ class ObtainAuthTokenTestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-
-class UserViewSetTestCase(APITestCase):
-    def setUp(self):
-        self.new_user = create_user()
-        self.url = reverse("api:user-list")
-        self.auth_header = 'Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b'
-
-        Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
-
-    def doCleanups(self):
-        User.drop_collection()
-        Token.drop_collection()
-
-    def test_get_unauthorized(self):
-        c = APIClient()
-
-        response = c.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_get_authorized(self):
-        c = APIClient()
-
-        response = c.get(self.url, HTTP_AUTHORIZATION=self.auth_header)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
 class UserViewTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
@@ -140,7 +116,7 @@ class UserViewTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         #TODO: add unique emails to the DB
     
-class PasswordChaneViewTest(APITestCase):
+class PasswordChangeViewTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
         self.url = reverse("api:pwd_change")
@@ -192,6 +168,55 @@ class PasswordChaneViewTest(APITestCase):
         else:
             print ("Something went wrong, password has not been changed.")
         
+class SignUpTest(APITestCase):
+    def setUp(self):
+        self.new_user = create_user()
+        self.url = reverse("api:signup")
+        
+    def doCleanups(self):
+        User.drop_collection()
+        Token.drop_collection()
+        EmailValidationToken.drop_collection()
+    
+    def test_signup(self):
+        c = APIClient()
+        my_user_data = {"username": "Mehdi6", "email":"mehdiessebbar@gmail.com", "password1": "azerty123", "password2":"azerty123"}
+        response = c.post(self.url, my_user_data)
+        print ("test_signup\n", response.content)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        try:
+            usr = User.objects.get(username="Mehdi6")
+        except DoesNotExist:
+            print ("User was not created")
+        
+    def test_signup_email_exist(self):
+        c = APIClient()
+        my_user_data = {"username": "Mehdi6", "email":"testuser@test.com", "password1": "azerty123", "password2":"azerty123"}
+        response = c.post(self.url, my_user_data)
+        print ("test_signup_email_exist", response.content)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_signup_username_exist(self):
+        c = APIClient()
+        my_user_data = {"username": "testuser", "email":"mehdiessebbar@test.com", "password1": "azerty123", "password2":"azerty123"}
+        response = c.post(self.url, my_user_data)
+        print ("test_signup_username_exist",response.content)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_signup_password_mismatch(self):
+        c = APIClient()
+        my_user_data = {"username": "mehdiess", "email":"mehdiessebbar@test.com", "password1": "azerty123", "password2":"blabla123"}
+        response = c.post(self.url, my_user_data)
+        print ("test_signup_password_mismatch", response.content)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_signup_username_constraints(self):
+        c = APIClient()
+        my_user_data = {"username": "tt", "email":"mehdiessebbar@test.com", "password1": "azerty123", "password2":"blabla123"}
+        response = c.post(self.url, my_user_data)
+        print ("test_signup_username_constraints", response.content)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
     
 def execute_test() :
     

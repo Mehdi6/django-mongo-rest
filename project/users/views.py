@@ -78,19 +78,6 @@ class PasswordChangeView(GenericAPIView):
         serializer.save()
         return Response({"detail": _("New password has been saved.")})
 
-    
-class UserUpdateView(mixins.UpdateModelMixin, GenericAPIView):
-    
-    permission_classes = (permissions.IsAuthenticated, )  # IsAdminUser?
-    authentication_classes = (TokenAuthentication, )
-    serializer_class = UserSerializer
-    
-    def get_object(self):
-        return self.request.user
-    
-    def put(self, request, *args, **kwargs):
-        return self.partial_update(request, *args, **kwargs)
-
 class SignUpView(GenericAPIView):
     # This view is for the creation of a new User account
     # It create the user according to its model User (unique username and email)
@@ -102,7 +89,7 @@ class SignUpView(GenericAPIView):
         #result = self.create(request, *args, **kwargs)
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(request)
         
         (token, validToken) = self.create_token(User.objects.get(username=serializer.validated_data['username']))
         sent = self.send_validation_email(serializer.validated_data['email'], token)
@@ -121,7 +108,7 @@ class SignUpView(GenericAPIView):
                 and be able to login to our plateform you need to 
                 validate your email address by clicking on the link bellow.
                 Thank you!"""
-        url= get_current_site(self.request)
+        url= self.request.get_host()
         msg +="\n\n" + url +"/validateemail/?token="+ token
         
         n = send_mail(
