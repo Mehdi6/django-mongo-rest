@@ -146,28 +146,56 @@ class PasswordChaneViewTest(APITestCase):
         
         User.drop_collection()
         Token.drop_collection()
-        
-    def test_get_unauthorized(self):
-        c = APIClient()
-        
-        response = c.post(self.url)
-        print (response.status_code)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_old_password(self):
         c = APIClient()
         c.credentials(HTTP_AUTHORIZATION=self.auth_header)
-        data = {"old_password":"", "new_password1":"", "new_password2":""}
+        data = {"old_password":"oldpwd", "new_password1":"azerty123", "new_password2":"azerty123"}
+        response = c.post(self.url, data)
+        print (response.content, response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_new_password_no_match(self):
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=self.auth_header)
+        data = {"old_password":"foobar", "new_password1":"azerty", "new_password2":"azdqsd"}
+        response = c.post(self.url, data)
+        print (response.content, response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_new_password_constraints(self):
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=self.auth_header)
+        data = {"old_password":"foobar", "new_password1":"azerty1", "new_password2":"azerty1"}
+        response = c.post(self.url, data)
+        print (response.content, response.status_code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_everything_is_ok(self):
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=self.auth_header)
+        data = {"old_password":"foobar", "new_password1":"azerty123", "new_password2":"azerty123"}
         response = c.post(self.url, data)
         print (response.content, response.status_code)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-    
+        self.new_user = User.objects.get(username=self.new_user.username)
+        # Check if password edited
+        if self.new_user.check_password("azerty123"): print ("Password did change.")
+        else:
+            print ("Something went wrong, password has not been changed.")
+        
     
 def execute_test() :
     
     new_test = PasswordChaneViewTest()
     new_test.doCleanups()
     new_test.setUp()
-    print ("first test: old password")
-    new_test.test_old_password()
+    #print ("first test: old password")
+    #new_test.test_old_password()
+    #print ("second test: new password no match")
+    #new_test.test_new_password_no_match()
+    #print ("third test: new password constraints")
+    #new_test.test_new_password_constraints()
+    print ("Fourth test: everything is ok")
+    new_test.test_everything_is_ok()
     

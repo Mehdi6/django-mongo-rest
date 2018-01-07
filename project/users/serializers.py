@@ -42,7 +42,9 @@ class UserSerializer(DocumentSerializer):
     
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ('username', 'email', 'first_name', 'last_name', 'bio', )
+        read_only_fields = ('email', )
+    
 
 class SignUpSerializer(DocumentSerializer):
     #id = serializers.IntegerField(read_only=False)
@@ -52,21 +54,21 @@ class SignUpSerializer(DocumentSerializer):
         model = User
         fields = ['username', 'email', 'password']#, 'first_name', 'last_name']
 
-class PasswordChangeSerializer(DocumentSerializer):
+class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(max_length=128)
     new_password1 = serializers.CharField(max_length=128)
     new_password2 = serializers.CharField(max_length=128)
 
-    error_messages = {
-        'password_mismatch': _("The two password fields didn't match."),
-        'password_constraints': _("Password constraints not respected."),
-    }
+    
     
     #set_password_form_class = SetPasswordForm
 
     def __init__(self, *args, **kwargs):
         super(PasswordChangeSerializer, self).__init__(*args, **kwargs)
-
+        self.error_messages = {
+        'password_mismatch': _("The two password fields didn't match."),
+        'password_constraints': _("Password constraints not respected."),
+        }
         self.request = self.context.get('request')
         self.user = getattr(self.request, 'user', None)
 
@@ -83,11 +85,11 @@ class PasswordChangeSerializer(DocumentSerializer):
 
     def validate(self, attrs):
         # validate the passwords
-        old_pwd = getattr(self.request, 'old_password')
+        old_pwd = attrs.get('old_password')#getattr(self.request, 'old_password')
         self.validate_old_password(old_pwd)
         
-        new_pwd1 = getattr(self.request, 'new_password1')
-        new_pwd2 = getattr(self.request, 'new_password2')
+        new_pwd1 = attrs.get('new_password1')
+        new_pwd2 = attrs.get('new_password2')
         
         if new_pwd1 == new_pwd2:
             # validate password constraints : length and characters user

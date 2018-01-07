@@ -55,7 +55,8 @@ class PasswordChangeView(GenericAPIView):
     """
     serializer_class = PasswordChangeSerializer
     permission_classes = (permissions.IsAuthenticated,)
-
+    authentication_classes = (TokenAuthentication, )
+    
     @sensitive_post_parameters_m
     def dispatch(self, *args, **kwargs):
         return super(PasswordChangeView, self).dispatch(*args, **kwargs)
