@@ -1,11 +1,15 @@
 from django.contrib.auth import authenticate
 from django.utils.translation import ugettext_lazy as _
+from django.core.mail import send_mail
+from project import settings
 
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 from rest_framework_mongoengine.serializers import DocumentSerializer
 from mongoengine.fields import ObjectIdField
+from mongoengine.errors import DoesNotExist
 
-from users.models import User
+from users.models import User, PasswordResetToken
 
 
 class AuthTokenSerializer(serializers.Serializer):
@@ -163,3 +167,57 @@ class PasswordChangeSerializer(serializers.Serializer):
         self.user.save()
         from django.contrib.auth import update_session_auth_hash
         update_session_auth_hash(self.request, self.user)
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    
+    def __init__(self, *args, **kwargs):
+        super(PasswordResetSerializer, self).__init__(*args, **kwargs)
+        self.request = self.context.get('request')
+    
+    def validate_email(self, email):
+        try:
+            usr = User.objects.get(email=email)
+        except DoesNotExist:
+            raise serializers.ValidationError("No user account found associated with this email '"+email+"'")
+            
+        if not usr.is_active:
+            raise serializers.ValidationError("The user account associated is deleted.")
+        elif not usr.email_is_valid:
+            raise serializers.ValidationError("The user account email is not verified yet.")
+    
+        self.user = usr
+        self.email = email
+        return email
+        
+    def save(self):
+        if not self.create_and_send_token():
+            raise serializers.ValidationError("We couldn't send you a password reset email. Please, contact administration.")
+    
+    def create_and_send_token(self):
+        msg = """As you request to reset your password, we have sent you this 
+                 email. Please browse the link bellow to proceed to reset your password."""
+        
+        # create a new token
+        token = PasswordResetToken(user=self.user)
+        token.save()
+        
+        url= self.request.get_host()
+        msg +="\n\n" + url +reverse("api:pwd_confirm")+"?token="+ token.token
+        
+        n = send_mail(
+            'Reset password',
+            msg,
+            settings.ADMIN_EMAIL,
+            [self.email],
+            fail_silently=False,
+            )
+        
+        # Email sent successfully
+        if n>0:
+            return True
+        
+        token.delete()
+        return False
+        

@@ -40,6 +40,22 @@ class EmailValidationToken(Document):
     def __str__(self):
         return self.token
 
+class PasswordResetToken(Document):
+    token = fields.StringField(required=True)
+    created_at = fields.DateTimeField(auto_now=True, default=timezone.now)
+    user = fields.ReferenceField(User, reverse_delete_rule=mongoengine.CASCADE)
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = self.generate_key()
+        return super(PasswordResetToken, self).save(*args, **kwargs)
+
+    def generate_key(self):
+        return binascii.hexlify(os.urandom(20)).decode()
+    
+    def __str__(self):
+        return self.token
+ 
 @python_2_unicode_compatible
 class Token(Document):
     """

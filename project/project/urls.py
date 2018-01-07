@@ -26,14 +26,15 @@ router.register(r'book', BookViewSet, r"book")
 #router.add_api_view(r'signup/', url(r'^signup/$', SignUpView.as_view(), name=r"signup"))
 #router.add_api_view(r'validateemail/', url(r'^validateemail/$', ValidateEmailView.as_view(), name=r"validateemail"))
 
+router.add_api_view(r'rest-auth/logout/', url(r'^rest-auth/logout/$', LogoutView.as_view(), name=r"logout"))
 router.add_api_view(r'rest-auth/login/', url(r'^rest-auth/login/$', LoginView.as_view(), name=r"login"))
 router.add_api_view(r'rest-auth/registration/', url(r'^rest-auth/registration/$', SignUpView.as_view(), name=r"signup"))
 router.add_api_view(r'rest-auth/password/change/', url(r'^rest-auth/password/change/$', PasswordChangeView.as_view(), name=r"pwd_change"))
 router.add_api_view(r'rest-auth/registration/verify-email/', url(r'^rest-auth/registration/verify-email/$', ValidateEmailView.as_view(), name=r"verify_email"))
 router.add_api_view(r'rest-auth/user/', url(r'^rest-auth/user/$', UserView.as_view(), name=r"user_profile"))
 
-#router.add_api_view(r'rest-auth', url(r'^rest-auth/password/reset/$', ResetPasswordView.as_view(), name=r"pwd_reset"))
-#router.add_api_view(r'rest-auth', url(r'^rest-auth/password/change/confirm/$', ConfirmPassword.as_view(), name=r"pwd_confirm"))
+router.add_api_view(r'rest-auth/password/reset/', url(r'^rest-auth/password/reset/$', ResetPasswordView.as_view(), name=r"pwd_reset"))
+router.add_api_view(r'rest-auth/password/change/confirm/', url(r'^rest-auth/password/change/confirm/$', ConfirmPasswordView.as_view(), name=r"pwd_confirm"))
 
 """
 LOGIN: `${ROOT_URL}rest-auth/login/`,

@@ -175,12 +175,76 @@ class ValidateEmailView(GenericAPIView):
     -Update email
 """
 
-class LoginView(views.APIView):
-    throttle_classes = ()
-    permission_classes = ()
+class ResetPasswordView(GenericAPIView):
+    #authentication_classes = (TokenAuthentication ) // No need
+    # url/?email=email@mail.com
+    serializer_class = PasswordResetSerializer
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
+        msg = {"detail": _("An email to reset your password was sent. Go check your emails.")}
+        return Response(msg, status= status.HTTP_200_OK)
+
+class ConfirmPasswordView(GenericAPIView):
+    # This view reset the user password
+    # It takes as input a token, then it verify if it 
+    # exists in the table of PasswordResetToken, if it does
+    # the reponse is 200, if it doesn't exists the response
+    # is bad request
+    def post(self, request, *args, **kwargs):
+        if 'token' in request.query_params:
+            token = request.query_params['token']
+        else:
+            return Response("No token provided", status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            valid = PasswordResetToken.objects.get(token=token)
+        except DoesNotExist:
+            msg = {"detail": _("Your token is not valid.")} 
+            return Response(msg, status=status.HTTP_400_BAD_REQUEST)
+            
+        #TODO import django.timezone ... timezone.now
+        
+        #tmz = pytz.timezone(settings.TIME_ZONE)
+        #expiration = (tmz.localize(datetime.datetime.now()) - valid.created_at)
+        expiration = timezone.now() - valid.created_at
+        
+        # If the reset password email was sent more than 15 mins ago, then it expired
+        if expiration.total_seconds()/60 > 15:
+            valid.delete()
+            msg = {"detail": _("Expired reset password email.")} 
+            return Response(msg, status=status.HTTP_200_OK)
+        
+        # remove the token and validate user account email_is_valid=true
+        user = valid.user
+        valid.delete()
+        user.email_is_valid=True
+        user.save()
+        msg = {"detail": _("Your Email is now validated.")}
+        return Response(msg, status=status.HTTP_200_OK)
+        
+class LogoutView(GenericAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = (TokenAuthentication, )
-    # parser_classes = (parsers.FormParser, parsers.MultiPartParser, parsers.JSONParser,)
-    # renderer_classes = (renderers.JSONRenderer,)
+    
+    def get(self, request, *args, **kargs):
+        usr = self.request.user
+        print (usr)
+        msg = {"detail": _("Successfully logged out.")}
+        
+        try:
+            token = Token.objects.get(user=usr)
+        except DoesNotExist:
+            pass
+        
+        token.delete()
+        return Response(msg, status = status.HTTP_200_OK)
+
+class LoginView(views.APIView):
+    
     serializer_class = AuthTokenSerializer
 
     def post(self, request, *args, **kwargs):
