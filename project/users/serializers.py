@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from django.utils.translation import ugettext_lazy as _
 from django.core.mail import send_mail
+from django.utils import timezone
 from project import settings
 
 from rest_framework import serializers
@@ -202,9 +203,9 @@ class PasswordResetSerializer(serializers.Serializer):
         # create a new token
         token = PasswordResetToken(user=self.user)
         token.save()
-        
+        print (token)
         url= self.request.get_host()
-        msg +="\n\n" + url +reverse("api:pwd_confirm")+"?token="+ token.token
+        msg +="\n\n" + url +reverse("rest-auth:pwd_confirm")+"?token="+ token.token
         
         n = send_mail(
             'Reset password',
@@ -220,4 +221,65 @@ class PasswordResetSerializer(serializers.Serializer):
         
         token.delete()
         return False
+ 
+class ConfirmPasswordSerializer(serializers.Serializer):
+    
+    token = serializers.CharField()
+    new_password1 = serializers.CharField(min_length=8, max_length=128)
+    new_password2 = serializers.CharField(min_length=8, max_length=128)
+    
+    def validate_token(self, token):
+        # check if token exists in the database
+        
+        try:
+            valid = PasswordResetToken.objects.get(token=token)
+        except DoesNotExist:
+            
+            msg = {"detail": _("Your token is not valid.")} 
+            raise serializers.ValidationError(msg)
+        
+        #print (valid)
+        
+        #Check if the token has expired
+        expiration = timezone.now() - valid.created_at
+        
+        # If the reset password email was sent more than 15 mins ago, then it expired
+        if expiration.total_seconds()/60 > 15:
+            valid.delete()
+            msg = {"detail": _("Expired token. Go reset your password again.")} 
+            raise serializers.ValidationError(msg)
+        
+        # remove the token and validate it
+        self.user = valid.user
+        self.token = valid
+        
+        return token
+    
+    def validate(self, attrs):
+        pwd1 = attrs.get('new_password1')
+        pwd2 = attrs.get('new_password2')
+        
+        if pwd1 != pwd2:
+            msg = {'detail':'Passwords mismatch.'}
+            raise serializers.ValidationError(msg)
+        
+        # check if password respect constraints
+        if not self.pwd_constraints(pwd1):
+            msg = {'detail':'The password does not respect security constraints.'}
+            raise serializers.ValidationError(msg)
+        
+        self.pwd = pwd1
+        
+        return attrs
+        
+    def pwd_constraints(self, pwd):
+        #Add some security constraints such a regexp validation (criteria: cap letters, special chars, numbers, etc)
+        return True
+    
+    def save(self):
+        # save the new password
+        self.user.set_password(self.pwd)
+        self.token.delete()
+        
+        
         

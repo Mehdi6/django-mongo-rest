@@ -108,7 +108,7 @@ class SignUpView(GenericAPIView):
                 validate your email address by clicking on the link bellow.
                 Thank you!"""
         url= self.request.get_host()
-        msg +="\n\n" + url +reverse("api:verify_email")+"?token="+ token
+        msg +="\n\n" + url +reverse("rest-auth:verify_email")+"?token="+ token
         
         n = send_mail(
             'Validation Email to Signup',
@@ -194,36 +194,15 @@ class ConfirmPasswordView(GenericAPIView):
     # exists in the table of PasswordResetToken, if it does
     # the reponse is 200, if it doesn't exists the response
     # is bad request
+    
+    serializer_class = ConfirmPasswordSerializer
+    
     def post(self, request, *args, **kwargs):
-        if 'token' in request.query_params:
-            token = request.query_params['token']
-        else:
-            return Response("No token provided", status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         
-        try:
-            valid = PasswordResetToken.objects.get(token=token)
-        except DoesNotExist:
-            msg = {"detail": _("Your token is not valid.")} 
-            return Response(msg, status=status.HTTP_400_BAD_REQUEST)
-            
-        #TODO import django.timezone ... timezone.now
-        
-        #tmz = pytz.timezone(settings.TIME_ZONE)
-        #expiration = (tmz.localize(datetime.datetime.now()) - valid.created_at)
-        expiration = timezone.now() - valid.created_at
-        
-        # If the reset password email was sent more than 15 mins ago, then it expired
-        if expiration.total_seconds()/60 > 15:
-            valid.delete()
-            msg = {"detail": _("Expired reset password email.")} 
-            return Response(msg, status=status.HTTP_200_OK)
-        
-        # remove the token and validate user account email_is_valid=true
-        user = valid.user
-        valid.delete()
-        user.email_is_valid=True
-        user.save()
-        msg = {"detail": _("Your Email is now validated.")}
+        msg = "Your password has been successfully updated."
         return Response(msg, status=status.HTTP_200_OK)
         
 class LogoutView(GenericAPIView):
@@ -232,7 +211,7 @@ class LogoutView(GenericAPIView):
     
     def get(self, request, *args, **kargs):
         usr = self.request.user
-        print (usr)
+        #print (usr)
         msg = {"detail": _("Successfully logged out.")}
         
         try:
