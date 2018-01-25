@@ -1,7 +1,9 @@
 from django.contrib.auth import authenticate
+import django.contrib.auth.password_validation as validators
 from django.utils.translation import ugettext_lazy as _
 from django.core.mail import send_mail
 from django.utils import timezone
+from django.core import exceptions
 from project import settings
 
 from rest_framework import serializers
@@ -10,15 +12,29 @@ from rest_framework_mongoengine.serializers import DocumentSerializer
 from mongoengine.fields import ObjectIdField
 from mongoengine.errors import DoesNotExist
 
-from users.models import User, PasswordResetToken
+from .models import User, PasswordResetToken
 
 
 class AuthTokenSerializer(serializers.Serializer):
-    username = serializers.CharField(label=_("Username"))
+    
+    #username = serializers.CharField(label=_("Username"))
+    email = serializers.EmailField(label=_("Email"))
     password = serializers.CharField(label=_("Password"), style={'input_type': 'password'})
-
+    
+    def validate_email(self, email):
+        # email validation start by checking if the email address exists in
+        # the database.
+        try:
+            user = User.objects.get(email=email)
+        except DoesNotExist:
+            raise serializers.ValidationError("No user account attached to the provided email.")
+        
+        self.username = user.username
+        return email
+        
     def validate(self, attrs):
-        username = attrs.get('username')
+        #username = attrs.get('username')
+        username = self.username
         password = attrs.get('password')
 
         if username and password:
@@ -51,11 +67,12 @@ class UserSerializer(DocumentSerializer):
     
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'bio', )
+        fields = ('username', 'email', 'first_name', 'last_name', 'about', 'website')
         read_only_fields = ('email', )
     
 
 class SignUpSerializer(serializers.Serializer):
+
     username = serializers.CharField(
         max_length=120,
         min_length=5)
@@ -85,10 +102,18 @@ class SignUpSerializer(serializers.Serializer):
 
     def validate_password1(self, password):
         #TODO better password constraints (length, uppercase, lowercase, special characters, etc)
-        min_length = 8#app_settings.PASSWORD_MIN_LENGTH
-        if len(password) < min_length:
-            raise serializers.ValidationError(_("Password must be a minimum of {0} "
-                                          "characters.").format(min_length))
+        errors = dict() 
+        try:
+            # validate the password and catch the exception
+            validators.validate_password(password=password, user=User)
+
+        # the exception raised here is different than serializers.ValidationError
+        except exceptions.ValidationError as e:
+            errors['password'] = list(e.messages)
+
+        if errors:
+            raise serializers.ValidationError(errors)
+        
         return password
 
     def validate(self, data):
@@ -204,8 +229,8 @@ class PasswordResetSerializer(serializers.Serializer):
         token = PasswordResetToken(user=self.user)
         token.save()
         print (token)
-        url= self.request.get_host()
-        msg +="\n\n" + url +reverse("rest-auth:pwd_confirm")+"?token="+ token.token
+        url= self.request.META['HTTP_ORIGIN']
+        msg +="\n\n" + url +"/reset/"+ token.token
         
         n = send_mail(
             'Reset password',
@@ -273,6 +298,18 @@ class ConfirmPasswordSerializer(serializers.Serializer):
         return attrs
         
     def pwd_constraints(self, pwd):
+        errors = dict() 
+        try:
+            # validate the password and catch the exception
+            validators.validate_password(password=pwd, user=User)
+
+        # the exception raised here is different than serializers.ValidationError
+        except exceptions.ValidationError as e:
+            errors['password'] = list(e.messages)
+
+        if errors:
+            raise serializers.ValidationError(errors)
+         
         #Add some security constraints such a regexp validation (criteria: cap letters, special chars, numbers, etc)
         return True
     

@@ -27,12 +27,18 @@ class User(AbstractUser):
     200 lines of boilerplate code from mongoengine.django.auth.User.
     """
     
-    bio = fields.StringField(max_length=1000)
+    about = fields.StringField(max_length=1000, blank=True)
+    website = fields.URLField(blank=True)
     # For email validation
     email_is_valid = fields.BooleanField(default=False)
 
 @python_2_unicode_compatible
 class EmailValidationToken(Document):
+    """
+    The email validation token model will store the token information that will
+    be needed to validate the user email during the registration.
+    
+    """
     token = fields.StringField(required=True)
     created_at = fields.DateTimeField(auto_now=True, default=timezone.now)
     user = fields.ReferenceField(User, reverse_delete_rule=mongoengine.CASCADE)
@@ -41,6 +47,11 @@ class EmailValidationToken(Document):
         return self.token
 
 class PasswordResetToken(Document):
+    """
+    THe password reset token model will store the token information that will be
+    needed to restore the user's password in case he forgets his account's pwd.
+    
+    """
     token = fields.StringField(required=True)
     created_at = fields.DateTimeField(auto_now=True, default=timezone.now)
     user = fields.ReferenceField(User, reverse_delete_rule=mongoengine.CASCADE)
@@ -60,8 +71,8 @@ class PasswordResetToken(Document):
 class Token(Document):
     """
     This is a mongoengine adaptation of DRF's default Token.
-
     The default authorization token model.
+    
     """
     key = fields.StringField(required=True)
     user = fields.ReferenceField(User, reverse_delete_rule=mongoengine.CASCADE)

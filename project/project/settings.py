@@ -13,8 +13,6 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 import sys
 import os
 
-import mongoengine
-
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -48,8 +46,7 @@ INSTALLED_APPS = [
     'django_mongoengine.mongo_auth',
     'django_mongoengine.mongo_admin',
     
-    'app',
-    'users'
+    'restauth'
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -108,34 +105,6 @@ MONGODB_DATABASES = {
     },
 }
 
-'''
-def is_test():
-    """
-    Checks, if we're running the server for real or in unit-test.
-
-    We might need a better implementation of this function.
-    """
-    if 'test' in sys.argv or 'testserver' in sys.argv:
-        print("Using a test mongo database")
-        return True
-    else:
-        print("Using a default mongo database")
-        return False
-
-if is_test():
-    db = 'test'
-else:
-    db = 'default'
-
-
-# establish connection with default or test database, depending on the management command, being run
-# note that this connection syntax is correct for mongoengine0.9-, but mongoengine0.10+ introduced slight changes
-mongoengine.connect(
-    db=MONGODB_DATABASES[db]['name'],
-    host=MONGODB_DATABASES[db]['host']
-)
-
-'''
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
 
@@ -161,7 +130,7 @@ AUTH_USER_MODEL = 'mongo_auth.MongoUser'
 # newline
 SESSION_ENGINE = 'django_mongoengine.sessions'
 
-MONGOENGINE_USER_DOCUMENT = 'users.models.User'
+MONGOENGINE_USER_DOCUMENT = 'restauth.models.User'
 
 # Don't confuse Django's AUTHENTICATION_BACKENDS with DRF's AUTHENTICATION_CLASSES!
 AUTHENTICATION_BACKENDS = (

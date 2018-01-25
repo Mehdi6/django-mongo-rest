@@ -3,7 +3,7 @@ from rest_framework import status, exceptions
 from rest_framework.reverse import reverse
 from mongoengine.errors import DoesNotExist
 
-from users.models import *
+from .models import *
 
 
 def create_superuser():
@@ -41,37 +41,11 @@ def create_user():
     return new_user
 
 
-class ObtainAuthTokenTestCase(APITestCase):
-    def setUp(self):
-        self.new_user = create_user()
-        self.url = reverse("api:auth")
-
-    def doCleanups(self):
-        User.drop_collection()
-
-    def test_post_correct_credentials(self):
-        c = APIClient()
-        print (self.url)
-        response = c.post(self.url, {"username": "user@example.com", "password": "foobar"})
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertRegexpMatches(response.content.decode('UTF-8'), r'{"token":"\S+"}')
-
-        token = Token.objects.get(user=self.new_user)
-        self.assertRegexpMatches(token.key, "\S+")
-
-    def test_post_incorrect_credentials(self):
-        c = APIClient()
-
-        response = c.post(self.url, {"username": "user@example.com", "password": ""})
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
 class UserViewTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
         self.superuser = create_superuser()
-        self.url = reverse("api:user_profile")
+        self.url = reverse("rest-auth:user_profile")
         
         self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
         self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
@@ -113,13 +87,13 @@ class UserViewTest(APITestCase):
                             ,"bio":"fresh bio my friend", "email":"admin@example.com"}
         response = c.put(self.url, fresh_updates)
         print (response.content, response.status_code)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         #TODO: add unique emails to the DB
     
 class PasswordChangeViewTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
-        self.url = reverse("api:pwd_change")
+        self.url = reverse("rest-auth:pwd_change")
         
         self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
         self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
@@ -171,7 +145,7 @@ class PasswordChangeViewTest(APITestCase):
 class SignUpTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
-        self.url = reverse("api:signup")
+        self.url = reverse("rest-auth:signup")
         
     def doCleanups(self):
         User.drop_collection()
@@ -223,7 +197,7 @@ class LoginViewTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
         #self.superuser = create_superuser()
-        self.url = reverse("api:login")
+        self.url = reverse("rest-auth:login")
         
         self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
         self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
@@ -275,7 +249,7 @@ class LogoutViewTest(APITestCase):
     def setUp(self):
         self.new_user = create_user()
         #self.superuser = create_superuser()
-        self.url = reverse("api:logout")
+        self.url = reverse("rest-auth:logout")
         
         self.auth_header = "Token 2c7e9e9465e917dcd34e620193ed2a7447140e5b"
         self.token = Token.objects.create(key='2c7e9e9465e917dcd34e620193ed2a7447140e5b', user=self.new_user)
@@ -298,16 +272,4 @@ class LogoutViewTest(APITestCase):
         token = Token.objects.filter(user=self.new_user)
         self.assertEqual(str(token), str([]))
         
-def execute_test() :
-    
-    new_test = UserViewTest()
-    new_test.doCleanups()
-    new_test.setUp()
-    #print ("first test: existing username")
-    #new_test.test_existing_username()
-    #print ("second test: existing email")
-    #new_test.test_existing_email()
-    print ("third test: retrieve user info")
-    new_test.test_read_user_info()
-    
     
